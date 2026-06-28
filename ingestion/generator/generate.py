@@ -81,13 +81,12 @@ def generate_legit(card: Card, merchants: list[Merchant], cfg: GeneratorConfig,
         n = _poisson(cfg.txns_per_card_per_day, rng)
         for _ in range(n):
             ts = _sample_ts_in_day(day_start, rng)
-            # 80% near home, 20% near a random merchant the card "travelled" to
-            if rng.random() < 0.8:
-                lat, lon = _jitter(card.home_lat, card.home_lon, 8, rng)
-                m = rng.choice(merchants)
-            else:
-                m = rng.choice(merchants)
-                lat, lon = _jitter(m.lat, m.lon, 3, rng)
+            # Legitimate cardholders transact near home: an online purchase happens
+            # from the cardholder's location, a card-present one at a nearby shop.
+            # (Merchant *metadata* may live in another metro; the transaction geo is
+            # the cardholder's, which is what the geo features actually measure.)
+            m = rng.choice(merchants)
+            lat, lon = _jitter(card.home_lat, card.home_lon, 10, rng)
             mean, std = card.amount_stats()
             amount = max(1.0, rng.lognormvariate(cfg.amount_lognorm_mu, cfg.amount_lognorm_sigma))
             device = card.primary_device_id if rng.random() < 0.97 else f"D{rng.getrandbits(48):012x}"

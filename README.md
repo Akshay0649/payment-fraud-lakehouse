@@ -98,6 +98,16 @@ Run the invariant tests:
 python -m pytest tests/ -q
 ```
 
+**See the outcome immediately — without Databricks.** `preview.py` reads the JSON
+output with pandas and computes the *same KPIs as the Gold dbt marts* (fraud rate,
+hourly heatmap, riskiest merchants, chargeback exposure, and legit-vs-fraud
+feature separation), so you get real numbers and a sanity check on the warehouse
+logic before deploying it:
+
+```bash
+python preview.py
+```
+
 ### 2. Land it in the Lakehouse
 
 Upload `ingestion/output/` to a Unity Catalog volume (or cloud storage), then run

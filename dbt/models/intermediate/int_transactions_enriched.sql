@@ -45,6 +45,11 @@ windowed as (
     select
         *,
         lag(event_ts) over (partition by card_id order by event_ts) as prev_ts,
+        -- previous transaction location, to measure movement between consecutive
+        -- transactions (the real "impossible travel" signal — distance from home
+        -- is kept separately, as it captures account-takeover instead).
+        lag(lat) over (partition by card_id order by event_ts) as prev_lat,
+        lag(lon) over (partition by card_id order by event_ts) as prev_lon,
         -- rolling stats for amount anomaly (z-score vs the card's own history)
         avg(amount_usd) over (
             partition by card_id order by event_ts
@@ -81,7 +86,11 @@ select
     ln(1 + amount_usd)                                          as amount_log,
     coalesce(unix_timestamp(event_ts) - unix_timestamp(prev_ts), 999999)
                                                                as seconds_since_prev,
-    {{ haversine_km('lat', 'lon', 'home_lat', 'home_lon') }}   as geo_distance_km,
+    -- distance from the card's home: large => possible account takeover
+    {{ haversine_km('lat', 'lon', 'home_lat', 'home_lon') }}   as geo_distance_from_home_km,
+    -- distance from the *previous* transaction: feeds impossible-travel speed
+    coalesce({{ haversine_km('lat', 'lon', 'prev_lat', 'prev_lon') }}, 0)
+                                                               as geo_distance_from_prev_km,
     case when device_id <> primary_device_id then 1 else 0 end as is_new_device,
     coalesce(baseline_fraud_rate, 0)                           as mcc_risk,
     case
@@ -90,10 +99,11 @@ select
     end                                                        as amount_zscore,
     txn_count_60s,
     txn_count_1h,
-    -- implied travel speed: huge values => physically impossible movement
+    -- implied travel speed between consecutive transactions: huge values are
+    -- physically impossible movement (the geo-impossible fraud pattern).
     case
         when coalesce(unix_timestamp(event_ts) - unix_timestamp(prev_ts), 0) <= 0 then 0
-        else {{ haversine_km('lat', 'lon', 'home_lat', 'home_lon') }}
+        else coalesce({{ haversine_km('lat', 'lon', 'prev_lat', 'prev_lon') }}, 0)
              / ((unix_timestamp(event_ts) - unix_timestamp(prev_ts)) / 3600.0)
     end                                                        as implied_speed_kmh,
 

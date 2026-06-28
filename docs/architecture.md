@@ -85,7 +85,13 @@ reference, so model promotion needs no code deploy.
 | `amount_zscore` | size vs. the card's own history | amount anomaly |
 | `seconds_since_prev` | time since last txn | card testing (tiny) |
 | `txn_count_60s` / `txn_count_1h` | velocity | card testing |
-| `geo_distance_km` | distance from card home | account takeover |
-| `implied_speed_kmh` | distance ÷ time | geo-impossible travel |
+| `geo_distance_from_home_km` | distance from card home | account takeover |
+| `geo_distance_from_prev_km` | distance from previous txn | geo-impossible travel |
+| `implied_speed_kmh` | prev-distance ÷ time | geo-impossible travel |
 | `is_new_device` | unrecognised device | account takeover |
 | `mcc_risk` | merchant category risk | merchant collusion |
+
+> Note: two complementary geo features are kept. Distance *from home* flags
+> account takeover (a charge in a far city). Distance and implied speed relative
+> to the **previous** transaction flag impossible travel and stay robust even
+> when a legitimate cardholder genuinely travels — which is why both matter.

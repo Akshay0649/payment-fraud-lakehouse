@@ -39,7 +39,8 @@ select
     -- features (also feed ML)
     e.amount_log,
     e.seconds_since_prev,
-    e.geo_distance_km,
+    e.geo_distance_from_home_km,
+    e.geo_distance_from_prev_km,
     e.is_new_device,
     e.mcc_risk,
     e.amount_zscore,

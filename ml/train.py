@@ -27,8 +27,9 @@ from sklearn.metrics import (average_precision_score, classification_report,
                              precision_recall_curve, roc_auc_score)
 
 FEATURES = [
-    "amount_log", "seconds_since_prev", "geo_distance_km", "is_new_device",
-    "mcc_risk", "amount_zscore", "txn_count_60s", "txn_count_1h", "implied_speed_kmh",
+    "amount_log", "seconds_since_prev", "geo_distance_from_home_km",
+    "geo_distance_from_prev_km", "is_new_device", "mcc_risk", "amount_zscore",
+    "txn_count_60s", "txn_count_1h", "implied_speed_kmh",
 ]
 LABEL = "is_fraud_label"
 SPLIT_DATE = "2026-06-22"   # last ~week reserved for evaluation
