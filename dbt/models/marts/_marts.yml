@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: fct_transactions
+    description: >
+      Central transaction fact (one row per transaction) with engineered
+      features, authorisation outcome, chargeback confirmation, and ground-truth
+      label. Incremental (merge on transaction_id).
+    columns:
+      - name: transaction_id
+        tests: [not_null, unique]
+      - name: amount_usd
+        tests:
+          - not_null
+          - dbt_utils.accepted_range: { min_value: 0, inclusive: false }
+      - name: geo_distance_km
+        tests:
+          - dbt_utils.accepted_range: { min_value: 0 }
+      - name: is_approved
+        tests: [not_null]
+      - name: is_confirmed_fraud
+        tests: [not_null]
+
+  - name: dim_merchant
+    columns:
+      - name: merchant_id
+        tests: [not_null, unique]
+      - name: risk_tier
+        tests:
+          - accepted_values: { values: ['low', 'medium', 'high'] }
+
+  - name: dim_card
+    columns:
+      - name: card_id
+        tests: [not_null, unique]
+
+  - name: agg_fraud_by_hour
+    columns:
+      - name: fraud_rate_pct
+        tests:
+          - dbt_utils.accepted_range: { min_value: 0, max_value: 100 }
+
+  - name: agg_merchant_risk
+    columns:
+      - name: merchant_id
+        tests: [not_null, unique]
+
+  - name: mart_model_performance
+    description: Precision/recall of live scores vs. truth, by day.
+    columns:
+      - name: precision
+        tests:
+          - dbt_utils.accepted_range: { min_value: 0, max_value: 1 }
+      - name: recall
+        tests:
+          - dbt_utils.accepted_range: { min_value: 0, max_value: 1 }

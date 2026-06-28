@@ -1,0 +1,64 @@
+# Databricks Asset Bundle — declarative, version-controlled deployment of the
+# whole platform (jobs, schedules, clusters). Deploy with:
+#   databricks bundle deploy -t prod
+#   databricks bundle run fraud_pipeline -t prod
+bundle:
+  name: fraud-lakehouse
+
+variables:
+  warehouse_id:
+    description: SQL warehouse used by dbt
+    default: ""
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: ${var.DATABRICKS_HOST}
+  prod:
+    mode: production
+    workspace:
+      host: ${var.DATABRICKS_HOST}
+
+resources:
+  jobs:
+    fraud_pipeline:
+      name: fraud-batch-pipeline
+      schedule:
+        quartz_cron_expression: "0 0 7 * * ?"   # daily 07:00 UTC
+        timezone_id: UTC
+      tasks:
+        - task_key: bronze_ingest
+          spark_python_task:
+            python_file: ./bronze_autoloader.py
+        - task_key: dbt_build
+          depends_on: [{ task_key: bronze_ingest }]
+          dbt_task:
+            project_directory: ../dbt
+            commands:
+              - "dbt deps"
+              - "dbt build --target prod"
+            warehouse_id: ${var.warehouse_id}
+        - task_key: score_batch
+          depends_on: [{ task_key: dbt_build }]
+          spark_python_task:
+            python_file: ../ml/train.py
+
+    fraud_streaming:
+      name: fraud-realtime-scoring
+      continuous: { pause_status: UNPAUSED }
+      tasks:
+        - task_key: stream_score
+          spark_python_task:
+            python_file: ./streaming_score.py
+
+    fraud_retrain:
+      name: fraud-weekly-retrain
+      schedule:
+        quartz_cron_expression: "0 0 3 ? * MON"  # Mondays 03:00 UTC
+        timezone_id: UTC
+      tasks:
+        - task_key: retrain
+          spark_python_task:
+            python_file: ../ml/retrain_from_chargebacks.py

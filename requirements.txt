@@ -1,0 +1,15 @@
+# --- data generation (Phase 1, runs anywhere) ---
+faker>=24.0
+
+# --- transformation ---
+dbt-databricks>=1.7,<2.0
+
+# --- ML ---
+mlflow>=2.10
+xgboost>=2.0
+scikit-learn>=1.4
+pandas>=2.0
+numpy>=1.26
+
+# --- optional: kafka streaming sink ---
+# confluent-kafka>=2.3

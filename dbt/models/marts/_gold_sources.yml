@@ -1,0 +1,15 @@
+version: 2
+
+# Tables written by the streaming/ML jobs (not by dbt). Declared as sources so
+# dbt models can read them with lineage. Populate them by running
+# databricks/streaming_score.py before building mart_model_performance.
+sources:
+  - name: gold
+    database: fraud
+    schema: gold
+    tables:
+      - name: live_fraud_alerts
+        description: Real-time fraud scores written by the Structured Streaming job.
+        columns:
+          - name: transaction_id
+            description: Joins back to fct_transactions.

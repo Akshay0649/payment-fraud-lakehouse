@@ -1,0 +1,13 @@
+# Copy to ~/.dbt/profiles.yml and fill in your Databricks workspace details.
+# Secrets come from environment variables — never commit a real token.
+fraud_lakehouse:
+  target: dev
+  outputs:
+    dev:
+      type: databricks
+      catalog: fraud                 # Unity Catalog catalog
+      schema: silver                 # default schema for dev models
+      host: "{{ env_var('DBT_DATABRICKS_HOST') }}"        # adb-xxxx.azuredatabricks.net
+      http_path: "{{ env_var('DBT_DATABRICKS_HTTP_PATH') }}"  # /sql/1.0/warehouses/xxxx
+      token: "{{ env_var('DBT_DATABRICKS_TOKEN') }}"
+      threads: 4

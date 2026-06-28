@@ -1,0 +1,63 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  generator:
+    name: generator (unit + smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -r requirements-dev.txt
+      - name: Lint python
+        run: ruff check ingestion ml
+      - name: Generator smoke test
+        run: python -m ingestion.generator.generate --accounts 300 --merchants 60 --window-days 7
+      - name: Validate output
+        run: python -m pytest tests/ -q
+
+  dbt:
+    name: dbt (parse + lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install dbt-databricks sqlfluff sqlfluff-templater-dbt
+      # Parse + compile validate the DAG/refs without a warehouse.
+      # A real `dbt build` runs on the Databricks job, gated on the secrets below.
+      - name: dbt deps & parse
+        working-directory: dbt
+        env:
+          DBT_DATABRICKS_HOST: ${{ secrets.DBT_DATABRICKS_HOST || 'placeholder.databricks.com' }}
+          DBT_DATABRICKS_HTTP_PATH: ${{ secrets.DBT_DATABRICKS_HTTP_PATH || '/sql/1.0/warehouses/x' }}
+          DBT_DATABRICKS_TOKEN: ${{ secrets.DBT_DATABRICKS_TOKEN || 'placeholder' }}
+        run: |
+          mkdir -p ~/.dbt && cp profiles.yml.example ~/.dbt/profiles.yml
+          dbt deps
+          dbt parse --no-partial-parse
+
+  build:
+    name: dbt build (warehouse)
+    needs: [generator, dbt]
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install dbt-databricks
+      - name: dbt build
+        working-directory: dbt
+        env:
+          DBT_DATABRICKS_HOST: ${{ secrets.DBT_DATABRICKS_HOST }}
+          DBT_DATABRICKS_HTTP_PATH: ${{ secrets.DBT_DATABRICKS_HTTP_PATH }}
+          DBT_DATABRICKS_TOKEN: ${{ secrets.DBT_DATABRICKS_TOKEN }}
+        run: |
+          dbt deps
+          dbt build --target prod
