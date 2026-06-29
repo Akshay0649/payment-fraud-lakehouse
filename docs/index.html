@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Real-Time Payment Fraud Lakehouse - Akshay Raviralla</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; background:#0d1117; color:#e6edf3; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; line-height:1.55; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 22px 64px; }
+  a { color:#2dd4bf; text-decoration:none; }
+  .hero { padding:64px 0 28px; border-bottom:1px solid #30363d; }
+  .eyebrow { color:#2dd4bf; font-size:13px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; }
+  h1 { font-size:40px; line-height:1.12; margin:10px 0 12px; }
+  .lede { color:#8b949e; font-size:18px; max-width:760px; }
+  .btns { margin-top:22px; display:flex; gap:12px; flex-wrap:wrap; }
+  .btn { background:#2dd4bf; color:#04221d; padding:10px 18px; border-radius:8px; font-weight:600; }
+  .btn.ghost { background:transparent; color:#e6edf3; border:1px solid #30363d; }
+  .badges { margin-top:24px; display:flex; gap:8px; flex-wrap:wrap; }
+  .badge { background:#161b22; border:1px solid #30363d; color:#8b949e; font-size:12px; padding:4px 10px; border-radius:20px; }
+  h2 { font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:#8b949e; margin:48px 0 16px; font-weight:700; }
+  .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .kpi { background:#161b22; border:1px solid #30363d; border-radius:12px; padding:18px; }
+  .kpi-v { font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .kpi-l { color:#8b949e; font-size:13px; margin-top:4px; }
+  .panel { background:#161b22; border:1px solid #30363d; border-radius:12px; padding:20px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .panel h3 { margin:0 0 4px; font-size:15px; }
+  .panel p { color:#8b949e; font-size:12.5px; margin:0 0 14px; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th,td { text-align:left; padding:7px 8px; border-bottom:1px solid #30363d; }
+  th { color:#8b949e; font-weight:600; }
+  td { font-variant-numeric:tabular-nums; }
+  .note { color:#8b949e; font-size:13px; }
+  .cardgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .feat { background:#161b22; border:1px solid #30363d; border-radius:12px; padding:16px; }
+  .feat b { color:#e6edf3; } .feat span { color:#8b949e; font-size:13px; }
+  footer { margin-top:54px; padding-top:20px; border-top:1px solid #30363d; color:#8b949e; font-size:13px; }
+  @media(max-width:720px){ .kpis,.grid2,.cardgrid{grid-template-columns:1fr;} h1{font-size:30px;} }
+</style></head>
+<body><div class="wrap">
+
+  <div class="hero">
+    <div class="eyebrow">Data Engineering &middot; Lakehouse &middot; MLOps</div>
+    <h1>Real-Time Payment Fraud Analytics Platform</h1>
+    <p class="lede">A production-grade, end-to-end platform that turns a raw stream of card
+      transactions into real-time fraud scores and batch risk analytics - on the Databricks
+      Lakehouse, modelled with dbt, scored with MLflow.</p>
+    <div class="btns">
+      <a class="btn" href="https://github.com/Akshay0649/payment-fraud-lakehouse">View on GitHub</a>
+      <a class="btn ghost" href="https://github.com/Akshay0649/payment-fraud-lakehouse/blob/master/docs/architecture.md">Architecture</a>
+      <a class="btn ghost" href="https://github.com/Akshay0649/payment-fraud-lakehouse/blob/master/README.md">README</a>
+    </div>
+    <div class="badges"><span class="badge">Databricks</span><span class="badge">Delta Lake</span><span class="badge">Auto Loader</span><span class="badge">Unity Catalog</span><span class="badge">dbt</span><span class="badge">Structured Streaming</span><span class="badge">MLflow</span><span class="badge">XGBoost</span><span class="badge">Python</span><span class="badge">GitHub Actions</span></div>
+  </div>
+
+  <h2>The platform at a glance</h2>
+  <div class="kpis"><div class="kpi"><div class="kpi-v" style="color:#2dd4bf">167,864</div><div class="kpi-l">transactions processed</div></div><div class="kpi"><div class="kpi-v" style="color:#f87171">0.264%</div><div class="kpi-l">fraud rate (realistic)</div></div><div class="kpi"><div class="kpi-v" style="color:#f87171">$158,227</div><div class="kpi-l">fraud volume detected</div></div><div class="kpi"><div class="kpi-v" style="color:#2dd4bf">132</div><div class="kpi-l">compromised cards</div></div><div class="kpi"><div class="kpi-v" style="color:#2dd4bf">$128,667</div><div class="kpi-l">confirmed chargeback loss</div></div><div class="kpi"><div class="kpi-v" style="color:#2dd4bf">501</div><div class="kpi-l">chargebacks (late labels)</div></div></div>
+  <p class="note" style="margin-top:12px">Numbers are computed from a reproducible
+    167,864-transaction synthetic dataset by the same logic as the Gold dbt
+    marts (<code>analytics/kpis.py</code>). Regenerate the page with <code>python report.py</code>.</p>
+
+  <h2>Architecture - one Delta layer, two latencies</h2>
+  <div class="panel"><svg viewBox="0 0 980 210" width="100%" role="img">
+  <rect x="8" y="12" width="150" height="50" rx="8" fill="#161b22" stroke="#2dd4bf" stroke-width="1.5"/><text x="83.0" y="33" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">Generator</text><text x="83.0" y="50" fill="#8b949e" font-size="10.5" text-anchor="middle">synthetic + fraud</text>
+  <rect x="196" y="12" width="150" height="50" rx="8" fill="#161b22" stroke="#388bfd" stroke-width="1.5"/><text x="271.0" y="33" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">Auto Loader</text><text x="271.0" y="50" fill="#8b949e" font-size="10.5" text-anchor="middle">Bronze Delta</text>
+  <rect x="384" y="12" width="150" height="50" rx="8" fill="#161b22" stroke="#388bfd" stroke-width="1.5"/><text x="459.0" y="33" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">dbt Silver</text><text x="459.0" y="50" fill="#8b949e" font-size="10.5" text-anchor="middle">features + SCD2</text>
+  <rect x="572" y="12" width="150" height="50" rx="8" fill="#161b22" stroke="#388bfd" stroke-width="1.5"/><text x="647.0" y="33" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">dbt Gold</text><text x="647.0" y="50" fill="#8b949e" font-size="10.5" text-anchor="middle">facts + marts</text>
+  <rect x="760" y="12" width="150" height="50" rx="8" fill="#161b22" stroke="#2dd4bf" stroke-width="1.5"/><text x="835.0" y="33" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">Databricks SQL</text><text x="835.0" y="50" fill="#8b949e" font-size="10.5" text-anchor="middle">dashboards</text>
+  <line x1="158" y1="37" x2="189" y2="37" stroke="#8b949e" stroke-width="1.5"/><path d="M189,33 L196,37 L189,41 Z" fill="#8b949e"/><line x1="346" y1="37" x2="377" y2="37" stroke="#8b949e" stroke-width="1.5"/><path d="M377,33 L384,37 L377,41 Z" fill="#8b949e"/><line x1="534" y1="37" x2="565" y2="37" stroke="#8b949e" stroke-width="1.5"/><path d="M565,33 L572,37 L565,41 Z" fill="#8b949e"/><line x1="722" y1="37" x2="753" y2="37" stroke="#8b949e" stroke-width="1.5"/><path d="M753,33 L760,37 L753,41 Z" fill="#8b949e"/>
+  <rect x="196" y="90" width="150" height="50" rx="8" fill="#161b22" stroke="#f87171" stroke-width="1.5"/><text x="271.0" y="111" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">Streaming</text><text x="271.0" y="128" fill="#8b949e" font-size="10.5" text-anchor="middle">Bronze readStream</text>
+  <rect x="384" y="90" width="150" height="50" rx="8" fill="#161b22" stroke="#f87171" stroke-width="1.5"/><text x="459.0" y="111" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">Feature calc</text><text x="459.0" y="128" fill="#8b949e" font-size="10.5" text-anchor="middle">foreachBatch</text>
+  <rect x="572" y="90" width="150" height="50" rx="8" fill="#161b22" stroke="#f87171" stroke-width="1.5"/><text x="647.0" y="111" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">MLflow model</text><text x="647.0" y="128" fill="#8b949e" font-size="10.5" text-anchor="middle">champion score</text>
+  <rect x="760" y="90" width="150" height="50" rx="8" fill="#161b22" stroke="#f87171" stroke-width="1.5"/><text x="835.0" y="111" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">live_fraud_alerts</text><text x="835.0" y="128" fill="#8b949e" font-size="10.5" text-anchor="middle">MERGE upsert</text>
+  <line x1="346" y1="115" x2="377" y2="115" stroke="#8b949e" stroke-width="1.5"/><path d="M377,111 L384,115 L377,119 Z" fill="#8b949e"/><line x1="534" y1="115" x2="565" y2="115" stroke="#8b949e" stroke-width="1.5"/><path d="M565,111 L572,115 L565,119 Z" fill="#8b949e"/><line x1="722" y1="115" x2="753" y2="115" stroke="#8b949e" stroke-width="1.5"/><path d="M753,111 L760,115 L753,119 Z" fill="#8b949e"/>
+  <line x1="271" y1="62" x2="271" y2="90" stroke="#8b949e" stroke-width="1.5"/>
+  <path d="M267,83 L271,90 L275,83 Z" fill="#8b949e"/>
+  <rect x="384" y="158" width="338" height="50" rx="8" fill="#161b22" stroke="#8b949e" stroke-width="1.5"/><text x="553.0" y="179" fill="#e6edf3" font-size="13" font-weight="600" text-anchor="middle">Chargebacks settle weeks later -> weekly retrain (champion-gated)</text><text x="553.0" y="196" fill="#8b949e" font-size="10.5" text-anchor="middle"></text>
+  <line x1="648" y1="140" x2="553" y2="158" stroke="#8b949e" stroke-width="1.2" stroke-dasharray="3"/>
+</svg></div>
+
+  <h2>Fraud signal over time</h2>
+  <div class="panel">
+    <h3>Fraud rate by hour of day</h3>
+    <p>Fraud is injected uniformly across time; legit traffic follows a diurnal curve - so
+      fraud rate spikes in the low-volume overnight hours. Emergent, not hard-coded.</p>
+    <svg viewBox="0 0 980 240" width="100%" role="img">
+  <text x="44" y="14" fill="#388bfd" font-size="11">&#9632; transaction volume</text>
+  <text x="214" y="14" fill="#f87171" font-size="11">&#9679; fraud rate %</text>
+  <rect x="50.3" y="194.3" width="24.5" height="17.7" rx="2" fill="#388bfd" opacity="0.35"/><rect x="87.5" y="203.8" width="24.5" height="8.2" rx="2" fill="#388bfd" opacity="0.35"/><rect x="124.7" y="203.1" width="24.5" height="8.9" rx="2" fill="#388bfd" opacity="0.35"/><rect x="161.8" y="202.9" width="24.5" height="9.1" rx="2" fill="#388bfd" opacity="0.35"/><rect x="199.0" y="203.4" width="24.5" height="8.6" rx="2" fill="#388bfd" opacity="0.35"/><rect x="236.2" y="194.3" width="24.5" height="17.7" rx="2" fill="#388bfd" opacity="0.35"/><rect x="273.3" y="167.7" width="24.5" height="44.3" rx="2" fill="#388bfd" opacity="0.35"/><rect x="310.5" y="124.0" width="24.5" height="88.0" rx="2" fill="#388bfd" opacity="0.35"/><rect x="347.7" y="90.1" width="24.5" height="121.9" rx="2" fill="#388bfd" opacity="0.35"/><rect x="384.8" y="76.3" width="24.5" height="135.7" rx="2" fill="#388bfd" opacity="0.35"/><rect x="422.0" y="65.6" width="24.5" height="146.4" rx="2" fill="#388bfd" opacity="0.35"/><rect x="459.2" y="47.2" width="24.5" height="164.8" rx="2" fill="#388bfd" opacity="0.35"/><rect x="496.3" y="29.6" width="24.5" height="182.4" rx="2" fill="#388bfd" opacity="0.35"/><rect x="533.5" y="55.8" width="24.5" height="156.2" rx="2" fill="#388bfd" opacity="0.35"/><rect x="570.7" y="74.3" width="24.5" height="137.7" rx="2" fill="#388bfd" opacity="0.35"/><rect x="607.8" y="74.0" width="24.5" height="138.0" rx="2" fill="#388bfd" opacity="0.35"/><rect x="645.0" y="64.3" width="24.5" height="147.7" rx="2" fill="#388bfd" opacity="0.35"/><rect x="682.2" y="46.9" width="24.5" height="165.1" rx="2" fill="#388bfd" opacity="0.35"/><rect x="719.3" y="22.0" width="24.5" height="190.0" rx="2" fill="#388bfd" opacity="0.35"/><rect x="756.5" y="40.4" width="24.5" height="171.6" rx="2" fill="#388bfd" opacity="0.35"/><rect x="793.7" y="70.8" width="24.5" height="141.2" rx="2" fill="#388bfd" opacity="0.35"/><rect x="830.8" y="115.8" width="24.5" height="96.2" rx="2" fill="#388bfd" opacity="0.35"/><rect x="868.0" y="152.4" width="24.5" height="59.6" rx="2" fill="#388bfd" opacity="0.35"/><rect x="905.2" y="176.6" width="24.5" height="35.4" rx="2" fill="#388bfd" opacity="0.35"/>
+  <polyline points="62.6,142.0 99.8,22.0 136.9,182.7 174.1,61.4 211.2,45.1 248.4,189.9 285.6,179.7 322.8,206.8 359.9,205.6 397.1,201.9 434.2,209.8 471.4,206.9 508.6,196.7 545.8,206.2 582.9,194.5 620.1,208.7 657.2,201.4 694.4,202.1 731.6,209.9 768.8,208.6 805.9,205.1 843.1,197.1 880.2,166.1 917.4,169.7" fill="none" stroke="#f87171" stroke-width="2"/>
+  <circle cx="62.6" cy="142.0" r="2.4" fill="#f87171"/><circle cx="99.8" cy="22.0" r="2.4" fill="#f87171"/><circle cx="136.9" cy="182.7" r="2.4" fill="#f87171"/><circle cx="174.1" cy="61.4" r="2.4" fill="#f87171"/><circle cx="211.2" cy="45.1" r="2.4" fill="#f87171"/><circle cx="248.4" cy="189.9" r="2.4" fill="#f87171"/><circle cx="285.6" cy="179.7" r="2.4" fill="#f87171"/><circle cx="322.8" cy="206.8" r="2.4" fill="#f87171"/><circle cx="359.9" cy="205.6" r="2.4" fill="#f87171"/><circle cx="397.1" cy="201.9" r="2.4" fill="#f87171"/><circle cx="434.2" cy="209.8" r="2.4" fill="#f87171"/><circle cx="471.4" cy="206.9" r="2.4" fill="#f87171"/><circle cx="508.6" cy="196.7" r="2.4" fill="#f87171"/><circle cx="545.8" cy="206.2" r="2.4" fill="#f87171"/><circle cx="582.9" cy="194.5" r="2.4" fill="#f87171"/><circle cx="620.1" cy="208.7" r="2.4" fill="#f87171"/><circle cx="657.2" cy="201.4" r="2.4" fill="#f87171"/><circle cx="694.4" cy="202.1" r="2.4" fill="#f87171"/><circle cx="731.6" cy="209.9" r="2.4" fill="#f87171"/><circle cx="768.8" cy="208.6" r="2.4" fill="#f87171"/><circle cx="805.9" cy="205.1" r="2.4" fill="#f87171"/><circle cx="843.1" cy="197.1" r="2.4" fill="#f87171"/><circle cx="880.2" cy="166.1" r="2.4" fill="#f87171"/><circle cx="917.4" cy="169.7" r="2.4" fill="#f87171"/><text x="62.6" y="232" fill="#8b949e" font-size="11" text-anchor="middle">00</text><text x="211.2" y="232" fill="#8b949e" font-size="11" text-anchor="middle">04</text><text x="359.9" y="232" fill="#8b949e" font-size="11" text-anchor="middle">08</text><text x="508.6" y="232" fill="#8b949e" font-size="11" text-anchor="middle">12</text><text x="657.2" y="232" fill="#8b949e" font-size="11" text-anchor="middle">16</text><text x="805.9" y="232" fill="#8b949e" font-size="11" text-anchor="middle">20</text><text x="917.4" y="232" fill="#8b949e" font-size="11" text-anchor="middle">23</text>
+</svg>
+  </div>
+
+  <div class="grid2" style="margin-top:16px">
+    <div class="panel">
+      <h3>Fraud by attack pattern</h3>
+      <p>Five injected patterns. Card-testing is high-count/low-value; account takeover is
+        the opposite - just like real fraud.</p>
+      <svg viewBox="0 0 460 158" width="100%" role="img"><text x="0" y="19" fill="#e6edf3" font-size="12">card testing</text><rect x="150" y="9" width="240.0" height="14" rx="3" fill="#f87171"/><text x="460" y="19" fill="#8b949e" font-size="11" text-anchor="end">267 | $444</text><text x="0" y="49" fill="#e6edf3" font-size="12">merchant collusion</text><rect x="150" y="39" width="60.2" height="14" rx="3" fill="#f87171"/><text x="460" y="49" fill="#8b949e" font-size="11" text-anchor="end">67 | $31,387</text><text x="0" y="79" fill="#e6edf3" font-size="12">account takeover</text><rect x="150" y="69" width="53.0" height="14" rx="3" fill="#f87171"/><text x="460" y="79" fill="#8b949e" font-size="11" text-anchor="end">59 | $83,747</text><text x="0" y="109" fill="#e6edf3" font-size="12">amount anomaly</text><rect x="150" y="99" width="22.5" height="14" rx="3" fill="#f87171"/><text x="460" y="109" fill="#8b949e" font-size="11" text-anchor="end">25 | $34,576</text><text x="0" y="139" fill="#e6edf3" font-size="12">geo impossible</text><rect x="150" y="129" width="22.5" height="14" rx="3" fill="#f87171"/><text x="460" y="139" fill="#8b949e" font-size="11" text-anchor="end">25 | $8,074</text></svg>
+    </div>
+    <div class="panel">
+      <h3>Feature separation: legit vs fraud</h3>
+      <p>Per-feature averages. Clear gaps = a model can learn this. This is what the
+        XGBoost scorer trains on.</p>
+      <svg viewBox="0 0 460 250" width="100%" role="img"><text x="0" y="16" fill="#e6edf3" font-size="12">amount ($)</text><rect x="150" y="8" width="22.7" height="11" rx="2" fill="#2dd4bf"/><text x="177.7" y="17" fill="#8b949e" font-size="10">42.7</text><rect x="150" y="24" width="190.0" height="11" rx="2" fill="#f87171"/><text x="345.0" y="33" fill="#8b949e" font-size="10">357.2</text><text x="0" y="62" fill="#e6edf3" font-size="12">dist. from home (km)</text><rect x="150" y="54" width="1.3" height="11" rx="2" fill="#2dd4bf"/><text x="156.3" y="63" fill="#8b949e" font-size="10">6.0</text><rect x="150" y="70" width="190.0" height="11" rx="2" fill="#f87171"/><text x="345.0" y="79" fill="#8b949e" font-size="10">878.3</text><text x="0" y="108" fill="#e6edf3" font-size="12">dist. from prev (km)</text><rect x="150" y="100" width="3.1" height="11" rx="2" fill="#2dd4bf"/><text x="158.1" y="109" fill="#8b949e" font-size="10">9.6</text><rect x="150" y="116" width="190.0" height="11" rx="2" fill="#f87171"/><text x="345.0" y="125" fill="#8b949e" font-size="10">595.4</text><text x="0" y="154" fill="#e6edf3" font-size="12">implied speed (km/h)</text><rect x="150" y="146" width="11.5" height="11" rx="2" fill="#2dd4bf"/><text x="166.5" y="155" fill="#8b949e" font-size="10">9.4</text><rect x="150" y="162" width="190.0" height="11" rx="2" fill="#f87171"/><text x="345.0" y="171" fill="#8b949e" font-size="10">154.8</text><text x="0" y="200" fill="#e6edf3" font-size="12">new device (%)</text><rect x="150" y="192" width="7.2" height="11" rx="2" fill="#2dd4bf"/><text x="162.2" y="201" fill="#8b949e" font-size="10">3.0</text><rect x="150" y="208" width="190.0" height="11" rx="2" fill="#f87171"/><text x="345.0" y="217" fill="#8b949e" font-size="10">79.2</text><text x="0" y="234" fill="#2dd4bf" font-size="11">&#9632; legit</text><text x="70" y="234" fill="#f87171" font-size="11">&#9632; fraud</text></svg>
+    </div>
+  </div>
+
+  <h2>Riskiest merchants <span style="text-transform:none;color:#8b949e;font-weight:400">~ agg_merchant_risk</span></h2>
+  <div class="panel"><table>
+    <tr><th>Merchant</th><th>Category</th><th>Txns</th><th>Fraud</th><th>Observed rate</th><th>Baseline</th></tr>
+    <tr><td>Online Retail #0075</td><td>online_retail</td><td>560</td><td>31</td><td>0.055</td><td>0.006</td></tr><tr><td>Online Retail #0012</td><td>online_retail</td><td>589</td><td>32</td><td>0.054</td><td>0.005</td></tr><tr><td>Online Retail #0236</td><td>online_retail</td><td>581</td><td>30</td><td>0.052</td><td>0.007</td></tr><tr><td>Online Retail #0080</td><td>online_retail</td><td>555</td><td>22</td><td>0.040</td><td>0.003</td></tr><tr><td>Online Retail #0243</td><td>online_retail</td><td>557</td><td>22</td><td>0.040</td><td>0.005</td></tr><tr><td>Online Retail #0097</td><td>online_retail</td><td>620</td><td>24</td><td>0.039</td><td>0.003</td></tr><tr><td>Online Retail #0002</td><td>online_retail</td><td>597</td><td>20</td><td>0.034</td><td>0.005</td></tr><tr><td>Online Retail #0237</td><td>online_retail</td><td>605</td><td>20</td><td>0.033</td><td>0.005</td></tr><tr><td>Online Retail #0055</td><td>online_retail</td><td>597</td><td>18</td><td>0.030</td><td>0.004</td></tr><tr><td>Online Retail #0296</td><td>online_retail</td><td>596</td><td>12</td><td>0.020</td><td>0.004</td></tr><tr><td>Online Retail #0214</td><td>online_retail</td><td>629</td><td>12</td><td>0.019</td><td>0.005</td></tr><tr><td>Online Retail #0079</td><td>online_retail</td><td>603</td><td>11</td><td>0.018</td><td>0.006</td></tr>
+  </table></div>
+
+  <h2>What makes it production-grade</h2>
+  <div class="cardgrid">
+    <div class="feat"><b>Honest ML</b><br><span>Ground-truth labels live in Bronze for
+      evaluation only - never a feature. Chargebacks (weeks late) are the production label.</span></div>
+    <div class="feat"><b>Two latencies, one truth</b><br><span>Batch (dbt) and streaming (Spark)
+      read/write the same Delta tables with identical feature logic, so scores agree.</span></div>
+    <div class="feat"><b>Class imbalance done right</b><br><span>~0.2% positives: optimise PR-AUC,
+      weight the positive class, F1-tuned alert threshold - never "accuracy".</span></div>
+    <div class="feat"><b>Idempotent &amp; replayable</b><br><span>Auto Loader checkpoints dedupe
+      ingestion; the streaming sink MERGEs, so re-processing updates not duplicates.</span></div>
+    <div class="feat"><b>Tested data</b><br><span>40+ dbt tests incl. singular cross-model
+      invariants + Python invariants, all gated in GitHub Actions CI.</span></div>
+    <div class="feat"><b>Governed &amp; orchestrated</b><br><span>Unity Catalog lineage &amp;
+      grants; Databricks Asset Bundles deploy batch, streaming &amp; retrain jobs.</span></div>
+  </div>
+
+  <footer>
+    Generated 2026-06-29 00:01 UTC from a reproducible synthetic dataset (seed-stable).
+    &middot; <a href="https://github.com/Akshay0649/payment-fraud-lakehouse">Akshay0649/payment-fraud-lakehouse</a>
+  </footer>
+</div></body></html>

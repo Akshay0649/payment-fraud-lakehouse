@@ -4,6 +4,9 @@ A production-grade, end-to-end data platform that turns a raw stream of card
 transactions into **real-time fraud scores** and **batch risk analytics** — built
 on the Databricks Lakehouse, modelled with dbt, and scored with MLflow.
 
+**▶ Live portfolio page:** https://akshay0649.github.io/payment-fraud-lakehouse/
+— charts and KPIs rendered from the real pipeline output.
+
 > **The idea in one line:** a fraud platform is only useful if it works at *two*
 > latencies — block the bad transaction in seconds, *and* let analysts understand
 > and tune the system over hours. This project does both off a single Delta

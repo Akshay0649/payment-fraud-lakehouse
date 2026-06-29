@@ -20,6 +20,8 @@ jobs:
         run: python -m ingestion.generator.generate --accounts 300 --merchants 60 --window-days 7
       - name: Validate output
         run: python -m pytest tests/ -q
+      - name: Build portfolio report (smoke)
+        run: python report.py
 
   dbt:
     name: dbt (parse + lint)
